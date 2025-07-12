@@ -51,25 +51,21 @@ This project implements a real-time, multithreaded alerting system that processe
 
 ---
 
-## Sample Project Demo
+## Sample Real Time Synthetic Data Generation Demo
 
-> Add a demo walkthrough of the Streamlit dashboard in `.gif` format.
 
-📁 Save your GIF in `assets/demo.gif`
+![ScreenRecording2025-07-12205454-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/f49e8cee-8d78-4eab-8378-33126c841c7b)
 
-```
-[ Insert GIF showcasing Streamlit dashboard in action ]
-```
 
 ---
 
 ## Streamlit Dashboard Screenshot
 
-📁 Save a static screenshot as `assets/dashboard.png`
 
-```
-[ Insert dashboard screenshot here ]
-```
+<img width="1898" height="735" alt="Screenshot 2025-07-12 205705" src="https://github.com/user-attachments/assets/360dbc6c-fd22-4d2d-ad47-d562ab8dd646" />
+
+<img width="1896" height="539" alt="Screenshot 2025-07-12 205715" src="https://github.com/user-attachments/assets/d8c88ed5-487f-4125-9a34-45223b18d65a" />
+
 
 ---
 
