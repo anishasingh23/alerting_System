@@ -1,71 +1,63 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 import os
+import time
 
-# Load alert data
-@st.cache_data
-def load_alerts():
-    filepath = "logs/alert_data.csv"
-    if os.path.exists(filepath):
-        return pd.read_csv(filepath, parse_dates=["timestamp"])
-    return pd.DataFrame(columns=["timestamp", "source", "type", "value", "message"])
+# Constants
+ALERT_FILE = "logs/alert_data.csv"
+REFRESH_INTERVAL = 10  # seconds
 
-# Title
-st.title(" Real-Time Alerting Dashboard")
+# App Config
+st.set_page_config(page_title="Real-Time Alert Dashboard", layout="wide")
 
-# Load data
-alerts = load_alerts()
+st.title("📊 Real-Time Alerting System Dashboard")
+st.markdown("---")
 
-if alerts.empty:
-    st.warning("No alert data found yet. Run the main alert system first.")
-    st.stop()
+# Load Data
+@st.cache_data(ttl=REFRESH_INTERVAL)
+def load_data():
+    if not os.path.exists(ALERT_FILE):
+        return pd.DataFrame(columns=["timestamp", "source", "type", "value", "message"])
+    return pd.read_csv(ALERT_FILE)
 
-# Filters
-sources = alerts["source"].unique().tolist()
-types = alerts["type"].unique().tolist()
 
-selected_sources = st.multiselect("Filter by Source", sources, default=sources)
-selected_types = st.multiselect("Filter by Alert Type", types, default=types)
+data = load_data()
 
-# Filtered data
-filtered = alerts[
-    (alerts["source"].isin(selected_sources)) &
-    (alerts["type"].isin(selected_types))
-]
-
-# Summary
-st.subheader(" Alert Summary")
+# Display Metrics
+st.subheader("🔎 System Summary")
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Alerts", len(filtered))
-col2.metric("ML Anomalies", filtered["type"].str.contains("ML").sum())
-col3.metric("Unique Sources", filtered["source"].nunique())
 
-# Color Mapping
-def classify_type(alert_type):
-    return "ML" if "ML" in alert_type else "Rule"
+col1.metric("Total Alerts", len(data))
+col2.metric("ML-Based Anomalies", len(data[data["message"] == "ML"]))
+col3.metric("Rule-Based Alerts", len(data[data["message"] == "Rule-based"]))
 
-filtered["category"] = filtered["type"].apply(classify_type)
-color_map = {"Rule": "red", "ML": "blue"}
-colors = filtered["category"].map(color_map)
+# Chart: Alerts over time
+if not data.empty:
+    data['timestamp'] = pd.to_datetime(data['timestamp'])
+    data_sorted = data.sort_values("timestamp")
 
-# Plot
-st.subheader(" Alert Timeline")
+    st.subheader("📈 Alerts Over Time")
 
-fig, ax = plt.subplots()
-ax.scatter(filtered["timestamp"], filtered["source"], c=colors, alpha=0.7)
+    fig = px.scatter(
+        data_sorted,
+        x="timestamp",
+        y="source",
+        color="message",
+        symbol="message",
+        title="Alert Timeline (Color: Alert Type)",
+        labels={"timestamp": "Time", "source": "Source", "message": "Type"},
+        color_discrete_map={"ML": "red", "Rule-based": "orange"}
+    )
+    fig.update_traces(marker=dict(size=10), selector=dict(mode='markers'))
+    fig.update_layout(legend_title_text="Alert Type", height=400)
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("No alert data available yet.")
 
-ax.set_xlabel("Time")
-ax.set_ylabel("Source")
-ax.set_title("Alert Events Timeline")
-ax.grid(True)
-legend_elements = [
-    plt.Line2D([0], [0], marker='o', color='w', label='Rule-based Alert', markerfacecolor='red', markersize=8),
-    plt.Line2D([0], [0], marker='o', color='w', label='ML Anomaly', markerfacecolor='blue', markersize=8),
-]
-ax.legend(handles=legend_elements)
-st.pyplot(fig)
+# Table View
+st.subheader("📋 Detailed Alerts")
+st.dataframe(data.tail(25).sort_values(by="timestamp", ascending=False), use_container_width=True)
 
-# Table
-st.subheader(" Raw Alert Data")
-st.dataframe(filtered.sort_values(by="timestamp", ascending=False), use_container_width=True)
+# Refresh Hint
+st.markdown(f"<small>Refreshing every {REFRESH_INTERVAL} seconds...</small>", unsafe_allow_html=True)

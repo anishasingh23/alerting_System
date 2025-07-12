@@ -1,31 +1,27 @@
-import random
 import time
+import random
 from datetime import datetime
 
 
 def generate_event():
-    base_cpu = random.gauss(50, 10)
-    base_memory = random.gauss(30, 5)
-    base_latency = random.gauss(100, 20)
-
-    # Inject anomaly with 5% probability
-    if random.random() < 0.05:
-        base_cpu += random.uniform(50, 100)       # spike
-        base_memory += random.uniform(40, 80)
-        base_latency += random.uniform(300, 600)
-
     return {
-        "timestamp": datetime.datetime.now().isoformat(),
-        "source": f"sensor-{random.randint(1,5)}",
-        "cpu": round(base_cpu, 2),
-        "memory": round(base_memory, 2),
-        "latency": round(base_latency, 2),
+        "timestamp": datetime.utcnow().isoformat(),
+        "source": random.choice(["Server-A", "Server-B", "Server-C"]),
+        "cpu": random.uniform(10, 100),
+        "memory": random.uniform(10, 100),
+        "disk_io": random.uniform(10, 100),
+        "latency": random.uniform(10, 500),
     }
 
 
-def stream_events(event_queue, stop_event, interval=0.1):
-    """Continuously puts simulated events into the shared queue."""
-    while not stop_event.is_set():
-        event = generate_event()
-        event_queue.put(event)
-        time.sleep(interval)
+class EventGenerator:
+    def __init__(self, event_queue, stop_event, interval=0.5):
+        self.event_queue = event_queue
+        self.stop_event = stop_event
+        self.interval = interval
+
+    def stream_events(self):
+        while not self.stop_event.is_set():
+            event = generate_event()
+            self.event_queue.put(event)
+            time.sleep(self.interval)

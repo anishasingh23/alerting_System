@@ -3,52 +3,38 @@ import logging
 from alert_rules import apply_rules
 from utils import write_alert_to_csv
 
-# NEW: Pass in ml_detector
-def alert_worker(worker_id, event_queue, stop_event, ml_detector=None):
-    while not stop_event.is_set():
-        try:
-            event = event_queue.get(timeout=1)
 
-            alerts = apply_rules(event)
+class AlertWorker(threading.Thread):
+    def __init__(self, worker_id, event_queue, stop_event, ml_detector=None):
+        super().__init__(daemon=True)
+        self.worker_id = worker_id
+        self.event_queue = event_queue
+        self.stop_event = stop_event
+        self.ml_detector = ml_detector
 
-            # Use ML detector if provided
-            if ml_detector and ml_detector.predict(event):
-                alerts.append("🔍 ML: Anomaly detected")
+    def run(self):
+        while not self.stop_event.is_set():
+            try:
+                event = self.event_queue.get(timeout=1)
+                alerts = apply_rules(event)
 
-            if alerts:
-                for alert in alerts:
-                    msg = f"[ALERT][{event['source']}] {alert} @ {event['timestamp']}"
-                    logging.warning(msg)
+                if self.ml_detector and self.ml_detector.predict(event):
+                    alerts.append("ML: Anomaly detected")
 
-                    # Determine alert type and value
-                    if "CPU" in alert:
-                        alert_type = "CPU"
-                        value = event["cpu"]
-                    elif "Memory" in alert:
-                        alert_type = "Memory"
-                        value = event["memory"]
-                    elif "Disk" in alert:
-                        alert_type = "Disk I/O"
-                        value = event["disk"]
-                    elif "ML" in alert:
-                        alert_type = "ML"
-                        value = "N/A"
-                    else:
-                        alert_type = "Other"
-                        value = "N/A"
+                if alerts:
+                    for alert in alerts:
+                        logging.warning(f"[ALERT][{event['source']}] {alert} @ {event['timestamp']}")
+                        write_alert_to_csv(
+                            timestamp=event["timestamp"],
+                            source=event["source"],
+                            alert_type=alert,
+                            value=f"{event['cpu']:.2f} | {event['memory']:.2f} | {event['disk_io']:.2f}",
+                            message="ML" if "ML" in alert else "Rule-based"
+                        )
+                else:
+                    logging.info(f"[OK][{event['source']}] Event OK @ {event['timestamp']}")
 
-                    # Save to CSV
-                    write_alert_to_csv(
-                        timestamp=event["timestamp"],
-                        source=event["source"],
-                        alert_type=alert_type,
-                        value=value,
-                        message=alert
-                    )
-            else:
-                logging.info(f"[OK][{event['source']}] Event OK @ {event['timestamp']}")
+                self.event_queue.task_done()
 
-            event_queue.task_done()
-
-        except Exception:
-            continue
+            except Exception:
+                continue
