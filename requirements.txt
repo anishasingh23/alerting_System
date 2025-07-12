@@ -1,0 +1,16 @@
+# === Base Requirements (Milestone 1) ===
+# No external libraries needed. Standard Python libraries only.
+
+# === Optional for Future Milestones ===
+# scikit-learn>=1.3.0     # For anomaly detection models
+# numpy>=1.24             # Numerical operations for ML
+# pandas>=2.0             # For any data logging/analysis
+# matplotlib              # If you plan to visualize performance
+
+pandas
+matplotlib
+seaborn
+streamlit
+
+# To install later:
+# pip install -r requirements.txt
